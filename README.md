@@ -1,1 +1,1 @@
-# PR2_CONSTRUCTION
+# RL based PR2 robot for construction tasks
