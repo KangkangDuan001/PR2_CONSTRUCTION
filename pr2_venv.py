@@ -66,14 +66,12 @@ class pr2GymEnv(gym.Env):
         # setup robot arm:
 
         self.plane = p.loadURDF(PLANE_URDF_PATH) # add ground
-        startPos = [0,0,0]
-        startOrientation = p.getQuaternionFromEuler([0,0,0])
         flags = pybullet.URDF_USE_SELF_COLLISION
         self.pr2 = pybullet.loadURDF(ROBOT_URDF_PATH, [0, 0, 0], [0, 0, 0, 1], flags=flags)
         self.table = pybullet.loadURDF(TABLE_URDF_PATH, [1.05, -0.2, 0.0], [0, 0, 0.7071, 0.7071],useFixedBase = 1)
         
-        self.end_effector_index_l = 
-        self.end_effector_index_r = 
+        self.end_effector_index_l = []
+        self.end_effector_index_r = []
         self.joints_list_r = [40, 41, 42, 44, 45, 47, 48]
         self.joints_list_l = [61, 62, 63, 65, 66, 68, 69]
         self.control_joints_l = ["l_shoulder_pan_joint", "l_shoulder_lift_joint", "l_upper_arm_roll_joint", "l_elbow_flex_joint", "l_forearm_roll_joint", "l_wrist_flex_joint","l_wrist_roll_joint"]
@@ -83,16 +81,19 @@ class pr2GymEnv(gym.Env):
 
         self.joints_l = AttrDict()
         self.joints_r = AttrDict()
-        get_joints_lists(joints_list_r,"right"):
-        get_joints_lists(joints_list_l,"left"):
+        self.get_joints_lists(self.joints_list_r,"right")
+        self.get_joints_lists(self.joints_list_l,"left")
 
         # object:
-        self.initial_cube1_pos = [0.6, -0.1, 0.65] # initial object pos
+        self.initial_cube1_pos = [0.6, 0.1, 0.65] # initial object pos
         self.initial_cube2_pos = [0.6, -0.3, 0.65] # initial object pos
-        self.cube1_id = p.loadURDF(CUBE_URDF_PATH, basePosition=initial_cube1_pos, globalScaling=0.05)
-        self.cube2_id = p.loadURDF(CUBE_URDF_PATH, basePosition=initial_cube2_pos, globalScaling=0.05)
+        self.cube1_id = pybullet.loadURDF(CUBE_URDF_PATH, basePosition=self.initial_cube1_pos, globalScaling=0.05)
+        self.cube2_id = pybullet.loadURDF(CUBE_URDF_PATH, basePosition=self.initial_cube2_pos, globalScaling=0.05)
 
         self.name = 'pr2GymEnv'
+        self.place_pos = [0.9,0.0,0.9]
+        self.is_pick_l = False
+        self.is_pick_r = False
         
         self.simulatedGripper = simulatedGripper
         self.action_dim = 4
@@ -176,18 +177,24 @@ class pr2GymEnv(gym.Env):
         
     def get_current_pose(self,arm):
         if arm == "left":
-            linkstate = pybullet.getLinkState(self.pr2, self.end_effector_index_l)
+            linkstate0 = pybullet.getLinkState(self.pr2, self.end_effector_index_l[0],computeForwardKinematics=True)
+            linkstate1 = pybullet.getLinkState(self.pr2, self.end_effector_index_l[1],computeForwardKinematics=True)
+            linkstate2 = pybullet.getLinkState(self.pr2, self.end_effector_index_l[2],computeForwardKinematics=True)
         if arm == "right":
-            linkstate = pybullet.getLinkState(self.pr2, self.end_effector_index_r)
-        position, orientation = linkstate[0], linkstate[1]
+            linkstate0 = pybullet.getLinkState(self.pr2, self.end_effector_index_r[0],computeForwardKinematics=True)
+            linkstate1 = pybullet.getLinkState(self.pr2, self.end_effector_index_r[1],computeForwardKinematics=True)
+            linkstate2 = pybullet.getLinkState(self.pr2, self.end_effector_index_r[2],computeForwardKinematics=True)
+        position, orientation = list((np.array(linkstate0[0])+np.array(linkstate1[0]))/2), linkstate2[1]
         return (position, orientation)
 
 
     def reset(self):
         self.stepCounter = 0
         self.terminated = False
-        self.pr2_or = [0.0, 1/2*math.pi, 0.0]
-
+        self.is_pick_l = False
+        self.is_pick_r = False
+        self.pick_to_place_l = goal_distance(self.cube1_pos, self.place_pos)
+        self.pick_to_place_r = goal_distance(self.cube2_pos, self.place_pos)
 
         pybullet.resetBasePositionAndOrientation(self.cube1_id, self.initial_obj_pos, [0.,0.,0.,1.0]) # reset object pos
         pybullet.resetBasePositionAndOrientation(self.cube2_id, self.initial_obj_pos, [0.,0.,0.,1.0]) # reset object pos
@@ -206,18 +213,21 @@ class pr2GymEnv(gym.Env):
         return self.observation
     
     
-    def step(self, action):
-        action = np.array(action)
-        arm_action = action[0:self.action_dim-1].astype(float) # dX, dY, dZ - range: [-1,1]
-        gripper_action = action[self.action_dim-1].astype(float) # gripper - range: [-1=closed,1=open]
+    def step(self, action_l,action_r):
+        action_arm_l = np.array(action_l).astype(float)
+        action_arm_r = np.array(action_r).astype(float)
 
         # get current position:
-        cur_p = self.get_current_pose()
+        cur_p_l = pybullet.getJointStates(self.pr2,self.joints_list_l)[0]
+        cur_p_r = pybullet.getJointStates(self.pr2,self.joints_list_r)[0]
+        
         # add delta position:
-        new_p = np.array(cur_p[0]) + arm_action
+        new_p_l = np.array(cur_p_l[0]) + action_arm_l
+        new_p_r = np.array(cur_p_r[0]) + action_arm_r
+        
         # actuate: 
-        joint_angles = self.calculate_ik(new_p, self.ur5_or) # XYZ and angles set to zero
-        self.set_joint_angles(joint_angles)
+        self.set_joint_angles(new_p_l,"left")
+        self.set_joint_angles(new_p_r,"right")
         
         # step simualator:
         for i in range(self.actionRepeat):
@@ -225,16 +235,15 @@ class pr2GymEnv(gym.Env):
             if self.renders: time.sleep(1./240.)
         
         self.getExtendedObservation()
-        reward = self.compute_reward(self.achieved_goal, self.desired_goal, None)
-        done = self.my_task_done()
+        reward_left, reward_right = self.compute_reward(self.gripper_pos, self.desired_goal, None)
+        done_left, done_right = self.my_task_done()
 
         info = {'is_success': False}
-        if self.terminated == self.task:
+        if self.terminated_l and self.terminated_r:
             info['is_success'] = True
 
         self.stepCounter += 1
-
-        return self.observation, reward, done, info
+        return self.observation, reward_left, reward_right, done_left, done_right, info
 
 
     # observations are: arm (tip/tool) position, arm acceleration, ...
@@ -244,56 +253,60 @@ class pr2GymEnv(gym.Env):
         tool_rot_l = self.get_current_pose("left")[1]
         tool_pos_r = self.get_current_pose("right")[0]
         tool_rot_r = self.get_current_pose("right")[1]
+        self.gripper_pos = (tool_pos_l,tool_pos_r)
         self.cube1_pos,_ = pybullet.getBasePositionAndOrientation(self.cube1_id)
         self.cube2_pos,_ = pybullet.getBasePositionAndOrientation(self.cube2_id)
         cube_1_pos = self.cube1_pos
-        cube_2_pos = self.cube2_pos       
-        goal_pos = self.goal_pos
+        cube_2_pos = self.cube2_pos
+        joints_state_l = pybullet.getJointStates(self.pr2,self.joints_list_l)
+        joints_state_r = pybullet.getJointStates(self.pr2,self.joints_list_r)
+        joints_pos_l = joints_state_l[0]
+        joints_pos_r = joints_state_r[0]
+        joints_vel_l = joints_state_l[1]
+        joints_vel_r = joints_state_r[1]
 
-        self.observation = np.array(np.concatenate((tool_pos_l,tool_rot_l,tool_pos_r,tool_rot_r, cube_1_pos, cube_2_pos, )))
-        self.achieved_goal = np.array(np.concatenate((objects_pos, tool_pos)))
-        self.desired_goal = np.array(goal_pos)
+        self.observation = np.array(np.concatenate((tool_pos_l,tool_rot_l,tool_pos_r,tool_rot_r, cube_1_pos, cube_2_pos,joints_pos_l,joints_pos_r,joints_vel_l,joints_vel_r )))
+        #self.achieved_goal = np.array(np.concatenate((objects_pos, tool_pos)))
+        #self.desired_goal = np.array(goal_pos)
 
 
     def my_task_done(self):
         # NOTE: need to call compute_reward before this to check termination!
-        c = (self.terminated == True or self.stepCounter > self.maxSteps)
-        return c
+        done_left = (self.terminated_l == True or self.stepCounter > self.maxSteps)
+        done_right = (self.terminated_r == True or self.stepCounter > self.maxSteps)
+        return done_left, done_right
 
 
-    def compute_reward(self, achieved_goal, desired_goal, info):
-        reward = np.zeros(1)
- 
-        grip_pos = achieved_goal[-3:]
-            
-        self.target_dist = goal_distance(grip_pos, desired_goal)
-        # print(grip_pos, desired_goal, self.target_dist)
+    def compute_reward(self, grip_pos, desired_goal, info):
+        rewards = np.zeros(2)
 
-        # check approach velocity:
-        # tv = self.tool.getVelocity()
-        # approach_velocity = np.sum(tv)
-
-        # print(approach_velocity)
-        # input()
+        self.pick_dist_l = goal_distance(grip_pos[0], self.cube1_pos)
+        self.place_dist_l = goal_distance(grip_pos[0], self.place_pos)
+        self.pick_dist_r = goal_distance(grip_pos[1], self.cube2_pos)
+        self.place_dist_r = goal_distance(grip_pos[1], self.place_pos)
 
         reward += -self.target_dist * 10
 
         # task 0: reach object:
-        if self.target_dist < self.learning_param:# and approach_velocity < 0.05:
-            self.terminated = True
-            # print('Successful!')
-
-        # penalize if it tries to go lower than desk / platform collision:
-        # if grip_trans[1] < self.desired_goal[1]-0.08: # lower than position of object!
-            # reward[i] += -1
-            # print('Penalty: lower than desk!')
+        if self.pick_dist_l < 0.02:
+            self.is_pick_l = True
+        if self.pick_dist_r < 0.02:
+            self.is_pick_r = True
+        if self.is_pick_l and self.place_dist_l < 0.05:
+            self.terminated_l = True
+        
+        if self.is_pick_l:
+            rewards[0] += -self.place_dist_l * 1.0
+        else:
+            rewards[0] += -self.pick_dist_l * 2.0 - self.pick_to_place_l
+        
+        if self.is_pick_r:
+            rewards[1] += -self.place_dist_r * 1.0
+        else:
+            rewards[1] += -self.pick_dist_r * 2.0 - self.pick_to_place_r
 
         # check collisions:
         if self.check_collisions(): 
             reward += -1
-            # print('Collision!')
 
-        # print(target_dist, reward)
-        # input()
-
-        return reward
+        return rewards[0], rewards[1]

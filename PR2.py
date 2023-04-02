@@ -1,17 +1,12 @@
 import pybullet as p
 import time
 import pybullet_data
-from pybullet_tools.pr2_utils import TOP_HOLDING_LEFT_ARM, PR2_URDF, DRAKE_PR2_URDF, \
-    SIDE_HOLDING_LEFT_ARM, PR2_GROUPS, open_arm, get_disabled_collisions, REST_LEFT_ARM, rightarm_from_leftarm
-from pybullet_tools.utils import set_base_values, joint_from_name, quat_from_euler, set_joint_position, \
-    set_joint_positions, add_data_path, connect, plan_base_motion, plan_joint_motion, enable_gravity, \
-    joint_controller, dump_body, load_model, joints_from_names, wait_if_gui, disconnect, get_joint_positions, \
-    get_link_pose, link_from_name, HideOutput, get_pose, wait_if_gui, load_pybullet, set_quat, Euler, PI, RED, add_line, \
-    wait_for_duration, LockRenderer, base_aligned_z, Point, set_point, get_aabb, stable_z_on_aabb, AABB
-from pybullet_tools.ikfast.pr2.ik import get_tool_pose, get_ik_generator
+from pybullet_tools.pr2_utils import PR2_GROUPS
+from pybullet_tools.utils import connect, dump_body, load_model, joints_from_names
+from pybullet_tools.ikfast.pr2.ik import get_ik_generator
 import numpy as np
 
-# connect to GUI simulator 
+# connect to GUI simulator
 connect(use_gui=True)
 
 # load objects into the environment 
@@ -20,16 +15,15 @@ p.setGravity(0,0,-10) # set gravity
 planeId = p.loadURDF("plane.urdf") # add ground
 startPos = [0,0,0]
 startOrientation = [0,0,0,1]#p.getQuaternionFromEuler([0,0,0])
-pr2_urdf = "/home/kk/pybullet-planning/models/drake/pr2_description/urdf/pr2_simplified.urdf"
-with HideOutput():
-    pr2 = load_model(pr2_urdf, fixed_base=True)
+pr2_urdf = "pr2_simplified.urdf"
+pr2 = load_model(pr2_urdf, fixed_base=True)
 #pr2 = p.loadURDF("/home/kk/pybullet-planning/models/drake/pr2_description/urdf/pr2_simplified.urdf",startPos, startOrientation,useFixedBase = 1) # add robot
-table_id = p.loadURDF("table/table.urdf", basePosition=[1.05, -0.2, 0.0], baseOrientation=[0, 0, 0.7071, 0.7071]) # add table
+table_id = p.loadURDF("table.urdf", basePosition=[1.05, -0.2, 0.0], baseOrientation=[0, 0, 0.7071, 0.7071]) # add table
 cube3_id = p.loadURDF("cube.urdf", basePosition=[0.6, -0.1, 0.65], globalScaling=0.04) # add target cube 3
 cube4_id = p.loadURDF("cube.urdf", basePosition=[0.6, -0.3, 0.65], globalScaling=0.04) # add target cube 4
-cube6_id = p.loadURDF("/home/kk/pybullet-planning/models/drake/objects/simple_cylinder.urdf", basePosition=[0.6, 0.1, 0.7], globalScaling=1) # add target cube 6
-cup1_id = p.loadURDF("/home/kk/pybullet-planning/models/cup_red.urdf", basePosition=[0.8, -0.1, 0.7], globalScaling=1.0, baseOrientation=[0, 0, 0.7071, 0.7071]) # add cup 1. We want to place the cube into it
-cup2_id = p.loadURDF("/home/kk/pybullet-planning/models/cup_blue.urdf", basePosition=[0.8, 0.1, 0.7], globalScaling=1.0, baseOrientation=[0, 0, 0.7071, 0.7071]) # add cup 2. We want to place the cube into it
+cube6_id = p.loadURDF("simple_cylinder.urdf", basePosition=[0.6, 0.1, 0.7], globalScaling=1) # add target cube 6
+cup1_id = p.loadURDF("cup_red.urdf", basePosition=[0.8, -0.1, 0.7], globalScaling=1.0, baseOrientation=[0, 0, 0.7071, 0.7071]) # add cup 1. We want to place the cube into it
+cup2_id = p.loadURDF("cup_blue.urdf", basePosition=[0.8, 0.1, 0.7], globalScaling=1.0, baseOrientation=[0, 0, 0.7071, 0.7071]) # add cup 2. We want to place the cube into it
 
 dump_body(pr2) #print the information of the robot including joints and links
 
