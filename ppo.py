@@ -95,7 +95,7 @@ class PPO:
         self.device = self.args.device
 
         self.state_dim = self.env.observation_space.shape[0]
-        self.action_dim = self.env.action_space.shape[0]
+        self.action_dim = self.env.action_space.shape[0]/2
         
         self.policy = ActorCritic(self.device ,self.state_dim, self.args.emb_size, self.action_dim, self.args.action_std).to(self.device)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.args.lr, betas=self.args.betas)

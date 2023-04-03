@@ -113,7 +113,7 @@ def main():
 
             action_left = ppo_left.select_action(state, memory_left)
             action_right = ppo_right.select_action(state, memory_right)
-            state, reward_left,reward_right, done_left,done_right, _ = env.step(action_left,action_right)
+            state, reward_left,reward_right, done_left,done_right, _ = env.step(np.concatenate((action_left,action_right)))
             
             # Saving reward and is_terminals:
             memory_left.rewards.append(reward_left)
