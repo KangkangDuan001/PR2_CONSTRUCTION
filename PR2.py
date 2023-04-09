@@ -36,10 +36,10 @@ cup2_id = p.loadURDF("/home/kk/pybullet-planning/models/cup_blue.urdf", basePosi
 # Get the camera image from PyBullet
 
 view_matrix = p.computeViewMatrixFromYawPitchRoll(
-    cameraTargetPosition=[0.1,0,1.26],
+    cameraTargetPosition=[0.5,0,1.35],
     distance=0.001,
-    yaw=-90,
-    pitch=-65,
+    yaw=90,
+    pitch=-90,
     roll=0,
     upAxisIndex=2)
 projection_matrix = p.computeProjectionMatrixFOV(
@@ -218,3 +218,44 @@ base = move_control(pr2, arm, target_pose,q)
 picked = move_arm(q,base,picked)
 
 p.disconnect()
+
+import pybullet as p
+import numpy as np
+
+# Define the robot and camera parameters
+robot_id = 0  # Replace with the ID of your robot
+camera_width = 640
+camera_height = 480
+fov = 60
+near = 0.1
+far = 100
+
+# Define the size of the object
+object_size = [0.1, 0.05, 0.02]  # Replace with the size of your object
+
+# Get the robot position and orientation
+robot_pos, robot_ori = p.getBasePositionAndOrientation(robot_id)
+
+# Compute the camera position and orientation relative to the robot
+camera_offset = [0.3, 0, 0.2]  # Replace with the position of your camera relative to the robot
+camera_pos = np.array(robot_pos) + np.array(p.getMatrixFromQuaternion(robot_ori)) @ np.array(camera_offset)
+camera_ori = np.array(p.getQuaternionFromEuler([0, np.pi/2, np.pi/2]))
+
+# Compute the view and projection matrices
+view_matrix = p.computeViewMatrixFromYawPitchRoll(camera_pos, camera_ori, 0, 0, 0, 2)
+projection_matrix = p.computeProjectionMatrixFOV(fov, camera_width / camera_height, near, far)
+
+# Get the camera image and depth information
+img, depth, _, _, _ = p.getCameraImage(camera_width, camera_height, view_matrix, projection_matrix, shadow=False)
+
+# Compute the XYZ coordinates of the object
+u, v = np.array([camera_width // 2, camera_height // 2])  # Use the center pixel
+z = depth[v][u]
+x = (u - camera_width // 2) * z / projection_matrix[0][0]
+y = (v - camera_height // 2) * z / projection_matrix[1][1]
+object_pos = [x, y, z] + np.array(robot_pos)
+
+# Adjust for the size of the object
+object_pos -= np.array([0, 0, object_size[2] / 2])
+
+print(object_pos)  # Output the XYZ coordinates of the object
