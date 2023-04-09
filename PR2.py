@@ -11,9 +11,11 @@ from pybullet_tools.utils import set_base_values, joint_from_name, quat_from_eul
 from pybullet_tools.ikfast.pr2.ik import get_tool_pose, get_ik_generator
 import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 # connect to GUI simulator 
-connect(use_gui=True)
+
+direct = p.connect(p.GUI)
 
 # load objects into the environment 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -23,13 +25,29 @@ startPos = [0,0,0]
 startOrientation = [0,0,0,1]#p.getQuaternionFromEuler([0,0,0])
 pr2 = p.loadURDF("/home/kk/pybullet-planning/models/drake/pr2_description/urdf/pr2_simplified.urdf",startPos, startOrientation,useFixedBase = 1,flags = p.URDF_USE_SELF_COLLISION) 
 
-table_id = p.loadURDF("table/table.urdf", basePosition=[1.05, -0.2, 0.0], baseOrientation=[0, 0, 0.7071, 0.7071]) # add table
+table_id = p.loadURDF("table/table.urdf", basePosition=[1.05, 0, 0.0], baseOrientation=[0, 0, 0.7071, 0.7071]) # add table
 #cube3_id = p.loadURDF("/home/kk/pybullet-planning/models/drake/objects/simple_cylinder.urdf", basePosition=[0.6, -0.1, 0.7], globalScaling=1) # add target cube 3
 #cube1_id = p.loadURDF("/home/kk/pybullet-planning/models/drake/objects/simple_cylinder.urdf", basePosition=[0.7, 0.05, 0.7], globalScaling=1) # add target cube 3
 #cube4_id = p.loadURDF("/home/kk/pybullet-planning/models/drake/objects/simple_cylinder.urdf", basePosition=[0.7, -0.05, 0.7], globalScaling=1) # add target cube 4
 cube6_id = p.loadURDF("/home/kk/pybullet-planning/models/drake/objects/simple_cylinder.urdf", basePosition=[0.6, 0.1, 0.7], globalScaling=1) # add target cube 6
 cup1_id = p.loadURDF("/home/kk/pybullet-planning/models/cup_red.urdf", basePosition=[0.8, -0.1, 0.7], globalScaling=1.0, baseOrientation=[0, 0, 0.7071, 0.7071]) # add cup 1. We want to place the cube into it
 cup2_id = p.loadURDF("/home/kk/pybullet-planning/models/cup_blue.urdf", basePosition=[0.8, 0.1, 0.7], globalScaling=1.0, baseOrientation=[0, 0, 0.7071, 0.7071]) # add cup 2. We want to place the cube into it
+
+# Get the camera image from PyBullet
+
+view_matrix = p.computeViewMatrixFromYawPitchRoll(
+    cameraTargetPosition=[0.1,0,1.26],
+    distance=0.001,
+    yaw=-90,
+    pitch=-65,
+    roll=0,
+    upAxisIndex=2)
+projection_matrix = p.computeProjectionMatrixFOV(
+    fov=90,
+    aspect=16/9,
+    nearVal=0.1,
+    farVal=4.0)
+
 picked = 0
 print(planeId,pr2,table_id,cube6_id)
 lit_mass = [50,52,59,60,71,73,80,81]
@@ -51,6 +69,15 @@ for i in range(len(right_joints)):
     for j in range(len(right_joints)):
         p.setCollisionFilterPair(pr2,pr2,left_joints[i],right_joints[j],enableCollision=1)
 # example to move left arm
+
+def view():
+    image = p.getCameraImage(
+    width=640,
+    height=480,
+    viewMatrix=view_matrix,
+    projectionMatrix=projection_matrix,
+    renderer=p.ER_BULLET_HARDWARE_OPENGL )[2][:, :, :3]
+    return image
 
 def move_control(robo_id,arm,target_pose,pre_pose=[0, 0, 0, 0, 0, 0, 0, 0]):
     base = [15,15,15,15,15,15,15,15]
@@ -90,6 +117,8 @@ def open_gripper(gripper_joints):
 
 def move_arm(q,base,picked):
     for i in range (1000):
+        if i % 40 == 0:
+            view()
         for j in range(len(q)):
             q[j] +=  base[j]
         p.setJointMotorControlArray(bodyIndex=pr2, jointIndices=list(torso_left), controlMode=p.POSITION_CONTROL, targetPositions = q,targetVelocities=[0]*len(q))
@@ -113,22 +142,22 @@ def compute_dist():
     return np.sqrt(np.sum(np.square(np.array(objects[0:2])-gripper_mid[0:2])))
 
 def check_collisions():
-    collisions = p.getContactPoints(pr2)
-    print("+++++++++++++++")
+    collisions = p.getContactPoints(pr2,pr2)
+    #print("+++++++++++++++")
     for i in range(len(collisions)):
-        print(collisions[i][1],collisions[i][2],collisions[i][3],collisions[i][4])
-        #return True
-    print("+++++++++++++++")
+        #print(collisions[i][1],collisions[i][2],collisions[i][3],collisions[i][4])
+        return True
+    #print("+++++++++++++++")
     #return False
 
 pi = 3.1415926/2
-p.setJointMotorControlArray(bodyIndex=pr2, jointIndices=list(right_joints), controlMode=p.POSITION_CONTROL, targetPositions=[pi, 0, 0, 0, 0, 0, 0])
+#p.setJointMotorControlArray(bodyIndex=pr2, jointIndices=list(right_joints), controlMode=p.POSITION_CONTROL, targetPositions=[pi, 0, 0, 0, 0, 0, 0])
 for j in range(500):
     p.setJointMotorControlArray(bodyIndex=pr2, jointIndices=list(torso_left), controlMode=p.POSITION_CONTROL, targetPositions=[0, 0, 0, 0, 0, 0, 0, 0])
     p.stepSimulation()
     time.sleep(1./240.)
-#print(p.getJointStates(pr2,torso_left))
-
+print(p.getLinkState(pr2,35))
+print(p.getLinkState(pr2,37))
 arm = 'left'
 x = 0.6
 y = 0.2
