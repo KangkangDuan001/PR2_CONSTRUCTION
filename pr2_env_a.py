@@ -383,9 +383,24 @@ class pr2GymEnv(gym.Env):
         self.getExtendedObservation()
         return self.observation
 
-    def step(self, action):
+    def set_cube_pose(self,action_pos):
+        new_pos_l = self.list_add(self.initial_cube1_pos, [action_pos[0],action_pos[1], 0])
+        new_pos_r = self.list_add(self.initial_cube2_pos, [action_pos[2],action_pos[3], 0])
+        if goal_distance(np.array(new_pos_l), np.array(new_pos_r)) > 0.1:
+            if not self.is_pick_l:
+                pybullet.resetBasePositionAndOrientation(self.cube1_id, new_pos_l, [0.,0.,0.,1.0]) # reset object pos
+            if not self.is_pick_r:
+                pybullet.resetBasePositionAndOrientation(self.cube2_id, new_pos_r, [0.,0.,0.,1.0]) # reset object pos
+
+
+
+
+
+
+    def step(self, action,pos_action):
         action_arm_l = np.zeros(7)
         action_arm_r = np.zeros(7)
+        pos_action_ = np.zeros(4)
         #action_arm_l[0] = np.clip(np.array(action[0]).astype(float), -0.715, 2.285)
         #action_arm_l[1] = np.clip(np.array(action[1]).astype(float), -0.524, 1.396)
         #action_arm_l[2] = np.clip(np.array(action[2]).astype(float), -0.800, 3.900)
@@ -415,11 +430,18 @@ class pr2GymEnv(gym.Env):
         action_arm_r[3] = np.clip(np.array(action[10]).astype(float)*3.142, -3.142, 3.142)
         action_arm_r[4] = np.clip(np.array(action[11]).astype(float)*3.142, -3.142, 3.142)
         action_arm_r[5] = np.clip(np.array(action[12]).astype(float)*3.142, -3.142, 3.142)
-        action_arm_r[6] = np.clip(np.array(action[13]).astype(float)*3.142, -3.142, 3.142) 
+        action_arm_r[6] = np.clip(np.array(action[13]).astype(float)*3.142, -3.142, 3.142)
+        #print(pos_action)
+        pos_action_[0] = np.clip(np.array(pos_action[0,0]).astype(float)/8, -0.12, 0.12)
+        pos_action_[1] = np.clip(np.array(pos_action[0,1]).astype(float)/5, -0.2, 0.2)
+        pos_action_[2] = np.clip(np.array(pos_action[0,2]).astype(float)/8, -0.12, 0.12)
+        pos_action_[3] = np.clip(np.array(pos_action[0,3]).astype(float)/5, -0.2, 0.2)
+        #print(pos_action_)
 
         # actuate: 
         self.set_joint_angles(action_arm_l,"left")
         self.set_joint_angles(action_arm_r,"right")
+        self.set_cube_pose(pos_action_)
 
         # step simualator:
         for i in range(25):
