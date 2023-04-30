@@ -1,5 +1,9 @@
 # Multiple agents reinforcement learning based control of PR2 robot for construction tasks
 This project aims to apply multiple agents reinforcement learning in construction tasks. Both collaboration and competition mechanisms are included in this project. The implementation of multi-agent PPO algorithm is based on the PPO algorithm from [Open AI Baselines](https://github.com/openai/baselines), [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3), and [pytorch version ppo](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail). 
+## Main Features
+1.
+2.
+3.
 ## Installation
 1. Clone the project
 ```
