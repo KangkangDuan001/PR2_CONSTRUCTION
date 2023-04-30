@@ -35,4 +35,17 @@ python PR2_CONSTRUCTION/#####.py --env-name "pr2" --use-gae --log-interval 1 --n
 ```
 python demo.py --load-dir-left trained_models/ppo/<filename> --load-dir-right trained_models/ppo/<filename>
 ```
-
+## Citing the Project
+To cite this repository in publications:
+```bibtex
+@article{Multiple agents reinforcement learning based control of PR2 robot for construction tasks,
+  author  = {Kangkang Duan and Zhengbo Zou},
+  title   = {Multiple agents reinforcement learning based control of PR2 robot for construction tasks},
+  journal = { },
+  year    = {2023},
+  volume  = { },
+  number  = { },
+  pages   = { },
+  url     = { }
+}
+```
