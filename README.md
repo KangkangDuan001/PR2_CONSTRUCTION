@@ -19,11 +19,20 @@ pip install h5py==3.8.0
 pip install scipy==1.10.1
 ```
 ### Training
+For no adversarial version
 ```
 python PR2_CONSTRUCTION/train.py --env-name "pr2" --use-gae --log-interval 1 --num-steps 2000 --lr 5e-4 --entropy-coef 0.01 --value-loss-coef 0.5 --ppo-epoch 4 --num-mini-batch 5 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 2500000 --use-linear-lr-decay 
 ```
+For adversarial version
+```
+python PR2_CONSTRUCTION/train_ad.py --env-name "pr2" --use-gae --log-interval 1 --num-steps 2000 --lr 5e-4 --entropy-coef 0.01 --value-loss-coef 0.5 --ppo-epoch 4 --num-mini-batch 5 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 2500000 --use-linear-lr-decay 
+```
+For environmental mask version
+```
+python PR2_CONSTRUCTION/train_ad.py --env-name "pr2" --use-gae --log-interval 1 --num-steps 2000 --lr 5e-4 --entropy-coef 0.01 --value-loss-coef 0.5 --ppo-epoch 4 --num-mini-batch 5 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 2500000 --use-linear-lr-decay 
+```
 ### Testing
 ```
-python demo.py --load-dir trained_models/ppo
+python demo.py --load-dir-left trained_models/ppo/<filename> --load-dir-right trained_models/ppo/<filename>
 ```
 
