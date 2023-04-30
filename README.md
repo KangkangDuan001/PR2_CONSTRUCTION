@@ -38,7 +38,7 @@ python demo.py --load-dir-left trained_models/ppo/<filename> --load-dir-right tr
 ## Citing the Project
 To cite this repository in publications:
 ```bibtex
-@article{Multiple agents reinforcement learning based control of PR2 robot for construction tasks,
+@article{
   author  = {Kangkang Duan and Zhengbo Zou},
   title   = {Multiple agents reinforcement learning based control of PR2 robot for construction tasks},
   journal = { },
