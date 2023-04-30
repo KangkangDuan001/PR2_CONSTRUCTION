@@ -29,7 +29,7 @@ python PR2_CONSTRUCTION/train_ad.py --env-name "pr2" --use-gae --log-interval 1 
 ```
 For environmental mask version
 ```
-python PR2_CONSTRUCTION/train_ad.py --env-name "pr2" --use-gae --log-interval 1 --num-steps 2000 --lr 5e-4 --entropy-coef 0.01 --value-loss-coef 0.5 --ppo-epoch 4 --num-mini-batch 5 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 2500000 --use-linear-lr-decay 
+python PR2_CONSTRUCTION/#####.py --env-name "pr2" --use-gae --log-interval 1 --num-steps 2000 --lr 5e-4 --entropy-coef 0.01 --value-loss-coef 0.5 --ppo-epoch 4 --num-mini-batch 5 --gamma 0.99 --gae-lambda 0.95 --num-env-steps 2500000 --use-linear-lr-decay 
 ```
 ### Testing
 ```
