@@ -7,7 +7,7 @@ This project aims to apply multiple agents reinforcement learning in constructio
 ## Installation
 1. Clone the project
 ```
-git clone https://github.com/KangkangDuan001/PR2_CONSTRUCTION.git
+https://github.com/kangk906/PR2_CONSTRUCTION.git
 ```
 2. The inverse kinematics part is based on the ikfast generator of [pybullet-planning](https://github.com/caelan/pybullet-planning) project.
 3. Create the virtual environment
